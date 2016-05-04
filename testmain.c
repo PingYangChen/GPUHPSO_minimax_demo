@@ -1,16 +1,16 @@
 #include "testgpu.h"
 
-extern float *GBest1;
-extern float *hostSwarm1, *hostVeloc1, *hostPBest1, *hostGBest1, *hostSvals1, *hostPvals1, *hostGBval1;
-extern float *hostSwarm2, *hostVeloc2, *hostPBest2, *hostGBest2, *hostSvals2, *hostPvals2, *hostGBval2;
+extern double *GBest1;
+extern double *hostSwarm1, *hostVeloc1, *hostPBest1, *hostGBest1, *hostSvals1, *hostPvals1, *hostGBval1;
+extern double *hostSwarm2, *hostVeloc2, *hostPBest2, *hostGBest2, *hostSvals2, *hostPvals2, *hostGBval2;
 
-void Initparticles(float *swarm, float *vel, const int loopIdx);
-void EvalObjFunc(float *fvals, float *swarm, const float fixed, const int loopIdx);
-void UpdateSwarm(float *swarm, float *vel, float *pBests, float *gBest, const int loopIdx);
-void UpdatePBest(float *swarm, float *pBests, float *fvals, float *fpvals, const int loopIdx, const int maximize, const int initial);
-void UpdateGBest(float *pBests, float *gBest, float *fpvals, float *fgval, const int loopIdx, const int maximize, const int initial);
-float hostObjFunc(float x, float y);
-void cpuHPSO(float *swarm, float *vel, float *fvals, const float fixed, float *pBests, float *gBest, float *fpvals, float *fgval, const int loopIdx, const int maximize, const int nIter);
+void Initparticles(double *swarm, double *vel, const int loopIdx);
+void EvalObjFunc(double *fvals, double *swarm, const double fixed, const int loopIdx);
+void UpdateSwarm(double *swarm, double *vel, double *pBests, double *gBest, const int loopIdx);
+void UpdatePBest(double *swarm, double *pBests, double *fvals, double *fpvals, const int loopIdx, const int maximize, const int initial);
+void UpdateGBest(double *pBests, double *gBest, double *fpvals, double *fgval, const int loopIdx, const int maximize, const int initial);
+double hostObjFunc(double x, double y);
+void cpuHPSO(double *swarm, double *vel, double *fvals, const double fixed, double *pBests, double *gBest, double *fpvals, double *fgval, const int loopIdx, const int maximize, const int nIter);
 
 int main() 
 {
@@ -27,7 +27,7 @@ int main()
 	cudaHPSO();
 	Get_From_Device();
 	gettimeofday(&end,NULL);	// Stop stopwatch and compute time
-	printf("The best location is at x = %2.2f\n", GBest1[0]);
+	printf("GPU: The best location is at x = %2.3f\n", GBest1[0]);
 	gputime = ((end.tv_sec-start.tv_sec) + (end.tv_usec-start.tv_usec)/1000000.0);
 	printf("GPU Time = %f sec.\n", gputime);
 	//printf("------------------------------------------- \n");
@@ -36,7 +36,7 @@ int main()
 	cpuHPSO(hostSwarm1, hostVeloc1, hostSvals1, 0.0, hostPBest1, hostGBest1, hostPvals1, hostGBval1, 0, 0, nIter1);
 	gettimeofday(&end,NULL);	// Stop stopwatch and compute time
 	printf("------------------------------------------- \n");
-	printf("CPU: The best location is at x = %2.2f\n", hostGBest1[0]);
+	printf("CPU: The best location is at x = %2.3f\n", hostGBest1[0]);
 	cputime = ((end.tv_sec-start.tv_sec) + (end.tv_usec-start.tv_usec)/1000000.0);
 	printf("CPU Time = %f sec.\n", cputime);
 	printf("------------------------------------------- \n");
@@ -46,18 +46,18 @@ int main()
 	
 }
 
-float hostObjFunc(float x, float y) 
+double hostObjFunc(double x, double y) 
 {
-	float res = (x - 1.0)*(x - 1.0) - y*y;
+	double res = (x - 1.0)*(x - 1.0) - y*y;
 	return res;
 }
 
 //
-void Initparticles(float *swarm, float *vel, const int loopIdx) 
+void Initparticles(double *swarm, double *vel, const int loopIdx) 
 {
-	int i;	
-	int LENGTH;
-	float U, L; 
+	long int i;	
+	long int LENGTH;
+	double U, L; 
 	switch (loopIdx) {
 		case 0:
 			LENGTH = nSwarm1; U = Ux; L = Lx; 
@@ -67,18 +67,18 @@ void Initparticles(float *swarm, float *vel, const int loopIdx)
 		break;
 	}
 	for (i = 0; i < LENGTH; i++) {
-		swarm[i] = ((float)rand()/(float)RAND_MAX) * (U - L) + L; 
-		vel[i] = ((float)rand()/(float)RAND_MAX); 
+		swarm[i] = ((double)rand()/(double)RAND_MAX) * (U - L) + L; 
+		vel[i] = ((double)rand()/(double)RAND_MAX); 
 		//if (i == 0) printf("Loop: %d, S_%d: %2.2f\n", loopIdx, i, swarm[i]);
 	}	
 }
 
 //
-void UpdateSwarm(float *swarm, float *vel, float *pBests, float *gBest, const int loopIdx)
+void UpdateSwarm(double *swarm, double *vel, double *pBests, double *gBest, const int loopIdx)
 {
-	int i;
-	int indexTmp, LENGTH;
-	float L, U;
+	long int i;
+	long int indexTmp, LENGTH;
+	double L, U;
 	switch (loopIdx) {
 		case 0:
 			LENGTH = nSwarm1; 
@@ -90,12 +90,12 @@ void UpdateSwarm(float *swarm, float *vel, float *pBests, float *gBest, const in
 		break;
 	}
 	
-	float r1;
-	float r2;
+	double r1;
+	double r2;
 	
 	for (i = 0; i < LENGTH; i++) {
-		r1 = (float)rand()/(float)RAND_MAX;
-		r2 = (float)rand()/(float)RAND_MAX;
+		r1 = (double)rand()/(double)RAND_MAX;
+		r2 = (double)rand()/(double)RAND_MAX;
 		//if (i == 0) printf("Loop: %d, V_0A: %2.2f\n", loopIdx, vel[i]);
 		vel[i] = omg * vel[i] + c1 * r1 * (pBests[i] - swarm[i]) + c2 * r2 * (gBest[0] - swarm[i]);
 		if (vel[i] > vmax) {
@@ -112,10 +112,10 @@ void UpdateSwarm(float *swarm, float *vel, float *pBests, float *gBest, const in
 }
 
 //
-void UpdatePBest(float *swarm, float *pBests, float *fvals, float *fpvals, const int loopIdx, const int maximize, const int initial) {
+void UpdatePBest(double *swarm, double *pBests, double *fvals, double *fpvals, const int loopIdx, const int maximize, const int initial) {
 	
-	int i;
-	int LENGTH;
+	long int i;
+	long int LENGTH;
 	switch (loopIdx) {
 		case 0:
 			LENGTH = nSwarm1; 
@@ -148,10 +148,10 @@ void UpdatePBest(float *swarm, float *pBests, float *fvals, float *fpvals, const
 }
 
 //
-void UpdateGBest(float *pBests, float *gBest, float *fpvals, float *fgval, const int loopIdx, const int maximize, const int initial)
+void UpdateGBest(double *pBests, double *gBest, double *fpvals, double *fgval, const int loopIdx, const int maximize, const int initial)
 {
 	
-	int lenPBest;
+	long int lenPBest;
 	switch (loopIdx) {
 		case 0:
 			lenPBest = nSwarm1;
@@ -161,9 +161,9 @@ void UpdateGBest(float *pBests, float *gBest, float *fpvals, float *fgval, const
 		break;
 	}
 		
-	float bestValInEachSwarm = fpvals[0];
-	int bestLocInEachSwarm = 0;
-	int k;
+	double bestValInEachSwarm = fpvals[0];
+	long int bestLocInEachSwarm = 0;
+	long int k;
 	if (maximize == 1) {
 		for (k = 1; k < lenPBest; k++) {
 			if (fpvals[k] > bestValInEachSwarm) {
@@ -177,6 +177,11 @@ void UpdateGBest(float *pBests, float *gBest, float *fpvals, float *fgval, const
 			}
 		}
 	}
+	
+	//if (loopIdx == 0) printf("Current Gbest Loc: %g ; ", gBest[0]);
+	//if (loopIdx == 0) printf("Current Gbest Val: %g \n", fgval[0]);	
+	//if (loopIdx == 0) printf("Best Pbest Loc: %g ; ", pBests[bestLocInEachSwarm]);
+	//if (loopIdx == 0) printf("Best Pbest Val: %g \n", fpvals[bestLocInEachSwarm]);
 		
 	if (initial == 1) {
 		fgval[0] = fpvals[bestLocInEachSwarm];
@@ -194,14 +199,15 @@ void UpdateGBest(float *pBests, float *gBest, float *fpvals, float *fgval, const
 			}
 		}
 	}
-	//printf("Loop: %d, Gbest: %2.2f \n", loopIdx, gBest[0]);
+	//if (loopIdx == 0) printf("Updated Gbest Loc: %g ; ", gBest[0]);
+	//if (loopIdx == 0) printf("Updated Gbest Val: %g \n", fgval[0]);	
 }
 
-void EvalObjFunc(float *fvals, float *swarm, const float fixed, const int loopIdx)
+void EvalObjFunc(double *fvals, double *swarm, const double fixed, const int loopIdx)
 {
-	int i;
-	int LENGTH;
-	int indexTmp;
+	long int i;
+	long int LENGTH;
+	long int indexTmp;
 	switch (loopIdx) {
 		case 0:
 			LENGTH = nSwarm1; 
@@ -222,7 +228,7 @@ void EvalObjFunc(float *fvals, float *swarm, const float fixed, const int loopId
 }
 
 //
-void cpuHPSO(float *swarm, float *vel, float *fvals, const float fixed, float *pBests, float *gBest, float *fpvals, float *fgval, const int loopIdx, const int maximize, const int nIter) 
+void cpuHPSO(double *swarm, double *vel, double *fvals, const double fixed, double *pBests, double *gBest, double *fpvals, double *fgval, const int loopIdx, const int maximize, const int nIter) 
 {
 	int t;
 	Initparticles(swarm, vel, loopIdx);
