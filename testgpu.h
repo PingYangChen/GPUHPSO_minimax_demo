@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <malloc.h>
+#include <immintrin.h>
 #include <sys/time.h>
 
-#define nSwarm1 64 // should be a multiple of 32
-#define nSwarm2 64 // should be a power of 2
+#define nSwarm1 256*8 // should be a multiple of 32
+#define nSwarm2 256*8 // should be a power of 2
 
-#define nIter1 50
-#define nIter2 50
+#define nIter1 10
+#define nIter2 10
 
 #define Ux 5.0
 #define Lx -5.0
